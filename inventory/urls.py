@@ -2,7 +2,8 @@ from django.urls import path
 from .views import (
     IngredientListCreateView,
     IngredientDetailView,
-    RecipeListCreateView
+    RecipeListCreateView,
+    LowStockAlertView
 )
 
 urlpatterns = [
@@ -11,4 +12,7 @@ urlpatterns = [
 
     # Recipe mapping
     path('products/<int:product_id>/recipes/', RecipeListCreateView.as_view()),
+
+    # 🔔 Low stock alerts
+    path('inventory/low-stock/', LowStockAlertView.as_view()),
 ]

@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-
+from django.db.models import F
 from .models import Ingredient, Recipe
 from .serializers import IngredientSerializer, RecipeSerializer
 from products.models import Product
@@ -70,3 +70,17 @@ class RecipeListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=201)
+    
+class LowStockAlertView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != 'ADMIN':
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
+        low_stock_items = Ingredient.objects.filter(
+            current_stock__lte=F('minimum_stock')
+        )
+
+        serializer = IngredientSerializer(low_stock_items, many=True)
+        return Response(serializer.data)

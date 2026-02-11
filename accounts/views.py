@@ -6,11 +6,15 @@ from rest_framework import status
 
 from .models import User
 from .serializers import LoginSerializer, UserSerializer
+from .authentication import CsrfExemptSessionAuthentication
 
 
+# =========================
+# LOGIN
+# =========================
 class LoginView(APIView):
-    authentication_classes = []  # allow login without auth
-    permission_classes = []
+    authentication_classes = []   # no auth required
+    permission_classes = []       # no permission required
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -28,31 +32,50 @@ class LoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-        login(request, user)  # SESSION LOGIN
+        login(request, user)  # ✅ SESSION LOGIN
         return Response({
             "user": UserSerializer(user).data
         })
 
 
+# =========================
+# CURRENT USER (ME)
+# =========================
 class MeView(APIView):
+    authentication_classes = [CsrfExemptSessionAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         return Response(UserSerializer(request.user).data)
 
 
+# =========================
+# LOGOUT
+# =========================
+class LogoutView(APIView):
+    authentication_classes = [CsrfExemptSessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        logout(request)
+        return Response({"detail": "Logged out successfully"})
+
+
+# =========================
+# STAFF MANAGEMENT (ADMIN)
+# =========================
 class StaffView(APIView):
+    authentication_classes = [CsrfExemptSessionAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        # Admin only
         if request.user.role != 'ADMIN':
             return Response(status=status.HTTP_403_FORBIDDEN)
+
         users = User.objects.all()
         return Response(UserSerializer(users, many=True).data)
 
     def post(self, request):
-        # Admin only: create cashier
         if request.user.role != 'ADMIN':
             return Response(status=status.HTTP_403_FORBIDDEN)
 
@@ -61,11 +84,15 @@ class StaffView(APIView):
         role = request.data.get('role', 'CASHIER')
 
         if not username or not password:
-            return Response({"detail": "username & password required"}, status=400)
+            return Response(
+                {"detail": "username & password required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         user = User.objects.create_user(
             username=username,
             password=password,
             role=role
         )
-        return Response(UserSerializer(user).data, status=201)
+
+        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)

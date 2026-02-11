@@ -11,15 +11,18 @@ class ProductListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        # Cashier + Admin both can view
+        # ✅ ADMIN + CASHIER can view products
         products = Product.objects.filter(is_available=True)
         serializer = ProductSerializer(products, many=True)
         return Response(serializer.data)
 
     def post(self, request):
-        # Admin only
+        # ❌ ONLY ADMIN can create products
         if request.user.role != 'ADMIN':
-            return Response(status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"detail": "Only admin can create products"},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         serializer = ProductSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
