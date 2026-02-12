@@ -68,13 +68,17 @@ class StaffView(APIView):
     authentication_classes = [CsrfExemptSessionAuthentication]
     permission_classes = [IsAuthenticated]
 
+    # 🔹 List users
     def get(self, request):
         if request.user.role != 'ADMIN':
             return Response(status=status.HTTP_403_FORBIDDEN)
 
         users = User.objects.all()
-        return Response(UserSerializer(users, many=True).data)
+        return Response(
+            UserSerializer(users, many=True).data
+        )
 
+    # 🔹 Create user
     def post(self, request):
         if request.user.role != 'ADMIN':
             return Response(status=status.HTTP_403_FORBIDDEN)
@@ -89,10 +93,70 @@ class StaffView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        if User.objects.filter(username=username).exists():
+            return Response(
+                {"detail": "Username already exists"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         user = User.objects.create_user(
             username=username,
             password=password,
-            role=role
+            role=role,
+            is_active=False   # 🔴 Default inactive
         )
 
-        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+        return Response(
+            UserSerializer(user).data,
+            status=status.HTTP_201_CREATED
+        )
+
+
+# =========================
+# ACTIVATE / DEACTIVATE USER
+# =========================
+class StaffStatusView(APIView):
+    authentication_classes = [CsrfExemptSessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id):
+        if request.user.role != 'ADMIN':
+            return Response(
+                {"detail": "Only admin allowed"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "User not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # ❌ Prevent self deactivate
+        if user.id == request.user.id:
+            return Response(
+                {"detail": "You cannot change your own status"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        action = request.data.get("action")
+
+        if action == "activate":
+            user.is_active = True
+
+        elif action == "deactivate":
+            user.is_active = False
+
+        else:
+            return Response(
+                {"detail": "Invalid action"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user.save()
+
+        return Response(
+            UserSerializer(user).data
+        )
