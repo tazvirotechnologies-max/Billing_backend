@@ -103,7 +103,6 @@ class StaffView(APIView):
             username=username,
             password=password,
             role=role,
-            is_active=False   # 🔴 Default inactive
         )
 
         return Response(

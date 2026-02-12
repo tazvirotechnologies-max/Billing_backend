@@ -3,7 +3,8 @@ from .views import (
     IngredientListCreateView,
     IngredientDetailView,
     RecipeListCreateView,
-    LowStockAlertView
+    LowStockAlertView,
+    UnavailableProductsView
 )
 
 urlpatterns = [
@@ -15,4 +16,10 @@ urlpatterns = [
 
     # 🔔 Low stock alerts
     path('inventory/low-stock/', LowStockAlertView.as_view()),
+
+    path(
+    'unavailable-products/',
+    UnavailableProductsView.as_view()
+),
+
 ]

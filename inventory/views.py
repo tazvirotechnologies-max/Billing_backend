@@ -84,3 +84,29 @@ class LowStockAlertView(APIView):
 
         serializer = IngredientSerializer(low_stock_items, many=True)
         return Response(serializer.data)
+    
+class UnavailableProductsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        unavailable_products = set()
+
+        # Loop through all recipes
+        recipes = Recipe.objects.select_related(
+            "product",
+            "ingredient"
+        )
+
+        for recipe in recipes:
+
+            ingredient = recipe.ingredient
+            required_qty = recipe.quantity_used
+
+            # If ingredient stock is insufficient
+            if ingredient.current_stock < required_qty:
+                unavailable_products.add(
+                    recipe.product.id
+                )
+
+        return Response(list(unavailable_products))
